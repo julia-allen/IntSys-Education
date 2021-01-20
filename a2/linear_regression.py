@@ -3,6 +3,9 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 from data_loader import get_data_loaders
+import math
+from sklearn.preprocessing import PolynomialFeatures
+from data_loader import SimpleDataset
 
 class LinearRegressionModel(nn.Module):
     """LinearRegressionModel is the linear regression regressor.
@@ -12,9 +15,15 @@ class LinearRegressionModel(nn.Module):
     :param num_param: The number of parameters that need to be initialized.
     :type num_param: int
     """
-    def __init__(self, num_param):
+
+
+
+    def __init__(self, num_param,loss_fn):
         ## TODO 1: Set up network
         super(LinearRegressionModel, self).__init__()
+        self.function=nn.Linear(num_param,1)
+        self.loss_fn=loss_fn
+
         pass
 
     def forward(self, x):
@@ -36,6 +45,7 @@ class LinearRegressionModel(nn.Module):
         :rtype: torch.Tensor
         """
         ## TODO 2: Implement the linear regression on sample x
+        return self.function(x.float())
         pass
 
 
@@ -44,8 +54,12 @@ def data_transform(sample):
   ## TODO: Define a transform on a given (x, y) sample. This can be used, for example
   ## for changing the feature representation of your data so that Linear regression works
   ## better.
-  x, y = sample
-  return sample ## You might want to change this
+    x = sample[0]
+    y = sample[1]
+    polynomial_features= PolynomialFeatures(degree=2)
+    x_poly = polynomial_features.fit_transform([x]) 
+    x_poly=x_poly[0]
+    return (x_poly,y) ## You might want to change this
 
 
 def mse_loss(output, target):
@@ -72,6 +86,8 @@ def mse_loss(output, target):
     """
     ## TODO 3: Implement Mean-Squared Error loss. 
     # Use PyTorch operations to return a PyTorch tensor
+    length=len(output)
+    return torch.sum((output-target)**2)/length
     pass
 
 def mae_loss(output, target):
@@ -98,6 +114,9 @@ def mae_loss(output, target):
     """
     ## TODO 4: Implement L1 loss. Use PyTorch operations.
     # Use PyTorch operations to return a PyTorch tensor.
+
+    length=len(output)
+    return torch.sum(abs(output-target))/length
     pass
 
 
@@ -150,5 +169,26 @@ if __name__ == "__main__":
     #
     ## You don't need to do loss.backward() or optimizer.step() here since you are no
     ## longer training.
+
+    train_loader, val_loader, test_loader =get_data_loaders(r"C:\Users\krazy\IntSys-Education\a2\data\DS1.csv", 
+                                            transform_fn=None,  # Can also pass in None here
+                                            train_val_test=[0.8,0.2,0.2], 
+                                            batch_size=2)
+    model = LinearRegressionModel(2,mae_loss)
+    model.train()
+    optimizer = optim.Adam(model.parameters(), lr=0.01)
+    for t in range(200):
+        for batch_index, (input_t, y) in enumerate(train_loader):
+            optimizer.zero_grad()
+            preds = model(input_t.float())
+            loss = model.loss_fn(preds, y)
+            loss.backward() 
+            optimizer.step()
+    model.eval()
+    total_loss=0
+    for batch_index, (input_t, y) in enumerate(test_loader):
+      preds = model(input_t)
+      total_loss=total_loss+mae_loss(preds,y)
+    print(total_loss/len(test_loader))
 
     pass

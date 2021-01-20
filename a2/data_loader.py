@@ -1,7 +1,9 @@
 import csv
 import numpy as np
 from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler
-
+import pandas as pd
+import torch as torch
+import math
 
 class SimpleDataset(Dataset):
     """SimpleDataset [summary]
@@ -11,15 +13,23 @@ class SimpleDataset(Dataset):
     :param path_to_csv: [description]
     :type path_to_csv: [type]
     """
-    def __init__(self, path_to_csv, transform=None):
+
+    def __init__(self, path_to_csv, transform=None, df=None):
         ## TODO: Add code to read csv and load data. 
         ## You should store the data in a field.
         # Eg (on how to read .csv files):
         # with open('path/to/.csv', 'r') as f:
         #   lines = ...
         ## Look up how to read .csv files using Python. This is common for datasets in projects.
+        
+        self.df = pd.read_csv(path_to_csv, header = None).to_numpy()
+
+        print(self.df)
+        print("Hello World")
+        print(len(self))
 
         self.transform = transform
+        print(self[59])
         pass
 
     def __len__(self):
@@ -28,6 +38,8 @@ class SimpleDataset(Dataset):
         [extended_summary]
         """
         ## TODO: Returns the length of the dataset.
+        
+        return len(self.df)
         pass
 
     def __getitem__(self, index):
@@ -42,11 +54,24 @@ class SimpleDataset(Dataset):
         ## The returned sample should be a tuple (x, y) where x is your input 
         ## vector and y is your label
         ## Before returning your sample, you should check if there is a transform
-        ## sepcified, and pply that transform to your sample
+        ## specified, and apply that transform to your sample
         # Eg:
         # if self.transform:
         #   sample = self.transform(sample)
-        ## Remember to convert the x and y into torch tensors.
+        # Remember to convert the x and y into torch tensors.
+
+        x=self.df[index,0:-1]
+        y=self.df[index,-1]
+
+        torch.tensor(np.asarray(x))
+        torch.tensor(np.asarray(y))
+
+        sample=(x,y)
+
+        if self.transform:
+            sample=self.transform(sample)
+
+        return (sample)
 
         pass
 
@@ -79,9 +104,14 @@ def get_data_loaders(path_to_csv,
     ## are formed.
 
     ## BEGIN: YOUR CODE
-    train_indices = []
-    val_indices = []
-    test_indices = []
+    ##np.random.shuffle(dataset)
+    test_indices = [0,math.floor(train_val_test[2]*len(dataset))]
+    train_indices = [math.floor(train_val_test[2]*len(dataset)), math.floor((1-train_val_test[2])*train_val_test[0]*len(dataset))+math.floor(train_val_test[2]*len(dataset))]
+    val_indices = [math.floor((1-train_val_test[2])*train_val_test[0]*len(dataset))+math.floor(train_val_test[2]*len(dataset)), -1]
+
+    print(test_indices)
+    print(train_indices)
+    print(val_indices)
     ## END: YOUR CODE
 
     # Now, we define samplers for each of the train, val and test data
@@ -94,4 +124,11 @@ def get_data_loaders(path_to_csv,
     test_sampler = SubsetRandomSampler(test_indices)
     test_loader = DataLoader(dataset, batch_size=batch_size, sampler=test_sampler)
 
+    print(test_sampler)
+    print(train_sampler)
+    print(val_sampler)
+
     return train_loader, val_loader, test_loader
+
+d= SimpleDataset(r"C:\Users\krazy\IntSys-Education\a2\data\DS1.csv")
+get_data_loaders(r"C:\Users\krazy\IntSys-Education\a2\data\DS1.csv")
